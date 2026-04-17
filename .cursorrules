@@ -1,0 +1,74 @@
+# Roavana.Kalender – Cursor AI Rules
+# Diese Datei erklärt dem AI-Assistenten in Cursor das Projekt
+
+## Projektbeschreibung
+Roavana.Kalender ist eine Next.js 14 SaaS-App für Ferienwohnungsvermieter.
+Sie synchronisiert Buchungen von Airbnb, Booking.com und Traumferienwohnung
+per iCal automatisch und verhindert Doppelbuchungen in Echtzeit.
+
+## Tech Stack
+- **Framework**: Next.js 14 (App Router), TypeScript
+- **Datenbank**: PostgreSQL via Supabase + Prisma ORM
+- **Auth**: NextAuth.js mit Google & Apple OAuth
+- **Zahlungen**: Stripe (Abonnements, Webhooks, Customer Portal)
+- **iCal**: node-ical (RFC 5545 Parser)
+- **E-Mails**: Resend.com
+- **Hosting**: Vercel (mit Cron Jobs für Auto-Sync)
+
+## Marke & Design
+- Firma: Roavana Travel GbR (roavana.de)
+- Farben: Hintergrund #0A0B09, Akzent #C9A96E (Sand-Gold), Grün #70C48A
+- Schriften: Playfair Display (Serif/Überschriften) + Sora (Body)
+- Stil: Dark, luxury, minimalist – keine generischen AI-Ästhetiken
+
+## Projektstruktur
+```
+src/
+  app/
+    api/
+      auth/[...nextauth]/  → NextAuth Handler
+      bookings/            → Buchungen CRUD
+      ical-feeds/          → iCal Feeds CRUD
+      properties/          → Objekte CRUD
+      sync-ical/           → Manueller + Cron Sync
+      stripe/
+        checkout/          → Stripe Checkout Session
+        webhook/           → Stripe Webhook Handler
+        portal/            → Customer Portal
+        subscription/      → Abo-Status abrufen
+      onboarding-complete/ → Onboarding abschließen
+    auth/                  → Login-Seite (Google + Apple)
+    dashboard/             → Haupt-Dashboard (Server + Client)
+    onboarding/            → 3-Schritt Onboarding
+    pricing/               → Pricing-Seite mit Stripe
+  lib/
+    auth.ts               → NextAuth Konfiguration
+    prisma.ts             → Prisma Client Singleton
+    ical-sync.ts          → iCal Sync Engine (Kern-Logik)
+  middleware.ts            → Auth-Schutz für /dashboard
+prisma/
+  schema.prisma            → DB Schema (User, Property, IcalFeed, Booking)
+```
+
+## Wichtige Konventionen
+- Alle API Routes prüfen Session mit `getServerSession(authOptions)`
+- Konflikt-Prüfung: `checkIn < andereCheckOut AND andereCheckIn < checkOut`
+- Platform-Enum: AIRBNB | BOOKING | TRAUMFERIENWOHNUNG | MANUAL
+- Währung: EUR (Standard), alle Preise als Float in der DB
+- Datums-Format intern: ISO 8601 / DateTime (Prisma)
+- Deutsche UI: alle Labels, Texte und Meldungen auf Deutsch
+
+## Stripe Abo-Pläne
+- FREE: 1 Objekt, 2 Feeds, kein Auto-Sync
+- STARTER (€9/Mo): 1 Objekt, 5 Feeds, manueller Sync
+- PRO (€19/Mo): 5 Objekte, ∞ Feeds, Auto-Sync 15 Min.
+- BUSINESS (€39/Mo): ∞ Objekte, ∞ Feeds, Auto-Sync 5 Min., API
+
+## ENV Variablen (alle erforderlich)
+DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET, NEXTAUTH_URL,
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+APPLE_ID, APPLE_TEAM_ID, APPLE_PRIVATE_KEY_ID, APPLE_PRIVATE_KEY,
+RESEND_API_KEY, EMAIL_FROM, CRON_SECRET, NEXT_PUBLIC_APP_URL,
+STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, STRIPE_PRICE_BUSINESS,
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
