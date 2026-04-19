@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/sync-ical",
-      "schedule": "*/0 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
