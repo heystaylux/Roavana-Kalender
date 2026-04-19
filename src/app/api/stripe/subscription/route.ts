@@ -8,10 +8,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
-    where: { id: (session.user as any).id },
+    where: { id: (session!.user as any).id },
     select: {
       subscriptionPlan:   true,
       subscriptionStatus: true,

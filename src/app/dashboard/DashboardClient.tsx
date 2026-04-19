@@ -413,7 +413,7 @@ export default function DashboardClient({ user, initialProperties, initialBookin
                   </div>
                 </div>
                 <button className="cb-btn" onClick={() => {
-                  setBookings(prev => prev.filter(b => b.id !== (c.a.revenue ?? 0) <= (c.b.revenue ?? 0) ? c.a.id : c.b.id));
+                  const removeId = (c.a.revenue ?? 0) <= (c.b.revenue ?? 0) ? c.a.id : c.b.id; setBookings(prev => prev.filter(b => b.id !== removeId));
                   showToast("Konflikt gelöst!");
                 }}>Lösen</button>
               </div>

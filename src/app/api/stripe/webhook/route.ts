@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-04-10" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 // Stripe braucht den raw body – kein JSON.parse()
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
       // ── Checkout abgeschlossen → Abo aktivieren ──────────────────────────
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.CheckoutSession;
+        const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== "subscription") break;
 
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
@@ -110,8 +110,8 @@ async function upsertSubscription(userId: string, sub: Stripe.Subscription) {
       subscriptionId:     sub.id,
       subscriptionPlan:   plan,
       subscriptionStatus: status,
-      subscriptionEnd:    new Date((sub.current_period_end) * 1000),
-      trialEnd:           sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      subscriptionEnd:    new Date(((sub as any).current_period_end) * 1000),
+      trialEnd:           (sub as any).trial_end ? new Date((sub as any).trial_end * 1000) : null,
     } as any,
   });
 }

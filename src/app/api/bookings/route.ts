@@ -21,14 +21,14 @@ const CreateBookingSchema = z.object({
 // GET: Buchungen abrufen (optional nach PropertyId filtern)
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const propertyId = searchParams.get("propertyId");
 
   const bookings = await prisma.booking.findMany({
     where: {
-      userId: (session.user as any).id,
+      userId: (session!.user as any).id,
       status: { not: "CANCELLED" },
       ...(propertyId ? { propertyId } : {}),
     },
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 // POST: Manuelle Buchung erstellen
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const body = await req.json();
   const parsed = CreateBookingSchema.safeParse(body);
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   // Objekt-Ownership prüfen
   const property = await prisma.property.findFirst({
-    where: { id: propertyId, userId: (session.user as any).id },
+    where: { id: propertyId, userId: (session!.user as any).id },
   });
   if (!property) return NextResponse.json({ error: "Objekt nicht gefunden" }, { status: 404 });
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
   const booking = await prisma.booking.create({
     data: {
-      userId: (session.user as any).id,
+      userId: (session!.user as any).id,
       propertyId,
       guestName,
       checkIn: checkInDate,

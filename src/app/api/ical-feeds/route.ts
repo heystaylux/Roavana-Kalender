@@ -17,10 +17,10 @@ const CreateFeedSchema = z.object({
 // GET: Alle Feeds des Users
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const feeds = await prisma.icalFeed.findMany({
-    where: { userId: (session.user as any).id },
+    where: { userId: (session!.user as any).id },
     include: { property: { select: { name: true, emoji: true } } },
     orderBy: { createdAt: "asc" },
   });
@@ -31,7 +31,7 @@ export async function GET() {
 // POST: Neuen Feed erstellen + sofort syncen
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const body = await req.json();
   const parsed = CreateFeedSchema.safeParse(body);
@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
 
   // Sicherstellen dass das Objekt dem User gehört
   const property = await prisma.property.findFirst({
-    where: { id: parsed.data.propertyId, userId: (session.user as any).id },
+    where: { id: parsed.data.propertyId, userId: (session!.user as any).id },
   });
   if (!property) return NextResponse.json({ error: "Objekt nicht gefunden" }, { status: 404 });
 
   const feed = await prisma.icalFeed.create({
     data: {
-      userId: (session.user as any).id,
+      userId: (session!.user as any).id,
       propertyId: parsed.data.propertyId,
       name: parsed.data.name,
       url: parsed.data.url,
@@ -64,14 +64,14 @@ export async function POST(req: NextRequest) {
 // DELETE: Feed löschen
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const feedId = searchParams.get("id");
   if (!feedId) return NextResponse.json({ error: "Feed-ID fehlt" }, { status: 400 });
 
   await prisma.icalFeed.deleteMany({
-    where: { id: feedId, userId: (session.user as any).id },
+    where: { id: feedId, userId: (session!.user as any).id },
   });
 
   return NextResponse.json({ success: true });

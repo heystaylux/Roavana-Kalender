@@ -37,12 +37,12 @@ export async function POST(req: NextRequest) {
   const { syncAllFeedsForUser } = await import("@/lib/ical-sync");
 
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!(session?.user as any)?.id) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
 
   try {
-    const results = await syncAllFeedsForUser((session.user as any).id);
+    const results = await syncAllFeedsForUser((session!.user as any).id);
     const totalAdded   = results.reduce((s, r) => s + r.added, 0);
     const totalUpdated = results.reduce((s, r) => s + r.updated, 0);
     const conflicts    = results.flatMap((r) => r.conflicts);
