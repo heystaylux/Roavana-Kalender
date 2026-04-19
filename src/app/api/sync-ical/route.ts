@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { syncAllFeeds } from "@/lib/ical-sync";
-
+export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   // ── Sicherheit: CRON_SECRET prüfen ────────────────────────────────────────
   const authHeader = req.headers.get("authorization");
