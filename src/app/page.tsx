@@ -1,10 +1,17 @@
-// src/app/page.tsx
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-export default async function RootPage() {
-  const session = await getServerSession(authOptions);
-  if (session) redirect("/dashboard");
-  redirect("/auth");
+export default function RootPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (session) router.replace("/dashboard");
+    else router.replace("/auth");
+  }, [session, status, router]);
+
+  return null;
 }
