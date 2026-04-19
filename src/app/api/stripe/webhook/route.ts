@@ -2,9 +2,11 @@
 // Empfängt Stripe Webhook Events und aktualisiert die DB
 // Events: checkout.completed, subscription updated/deleted, invoice events
 
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
