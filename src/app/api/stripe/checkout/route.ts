@@ -1,14 +1,14 @@
-// src/app/api/stripe/checkout/route.ts
-// Erstellt eine Stripe Checkout Session für ein Abo
-
 export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return NextResponse.json({ error: "User nicht gefunden" }, { status: 404 });
 
-  // Stripe Customer erstellen oder laden
+  const stripe = getStripe();
+
   let customerId = (user as any).stripeCustomerId;
   if (!customerId) {
     const customer = await stripe.customers.create({
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: 14,         // 14 Tage kostenlos
+      trial_period_days: 14,
       metadata: { userId, plan },
     },
     success_url: `${appUrl}/dashboard?upgraded=true&plan=${plan}`,

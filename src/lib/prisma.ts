@@ -1,16 +1,18 @@
-// src/lib/prisma.ts
-// Prisma Client Singleton – verhindert zu viele DB-Verbindungen in Development
-
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createClient(): PrismaClient {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   });
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    const client = (globalForPrisma.prisma ??= createClient());
+    return (client as any)[prop];
+  },
+});

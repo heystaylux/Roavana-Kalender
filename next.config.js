@@ -10,6 +10,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
+    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
     missingSuspenseWithCSRBailout: false,
   },
 };

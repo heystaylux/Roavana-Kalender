@@ -1,17 +1,17 @@
-// src/app/api/stripe/webhook/route.ts
-// Empfängt Stripe Webhook Events und aktualisiert die DB
-// Events: checkout.completed, subscription updated/deleted, invoice events
-
 export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
+}
 
-// Stripe braucht den raw body – kein JSON.parse()
 export async function POST(req: NextRequest) {
+  const stripe = getStripe();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
   const body = await req.text();
   const sig  = req.headers.get("stripe-signature")!;
 
@@ -26,35 +26,28 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
 
-      // ── Checkout abgeschlossen → Abo aktivieren ──────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== "subscription") break;
-
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
         const userId = subscription.metadata?.userId;
         if (!userId) break;
-
-        await upsertSubscription(userId, subscription);
-        console.log(`✅ Abo aktiviert für User ${userId}, Plan: ${subscription.metadata?.plan}`);
+        await upsertSubscription(stripe, userId, subscription);
         break;
       }
 
-      // ── Abo aktualisiert (Upgrade/Downgrade/Verlängerung) ─────────────────
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.userId;
         if (!userId) break;
-        await upsertSubscription(userId, subscription);
+        await upsertSubscription(stripe, userId, subscription);
         break;
       }
 
-      // ── Abo gekündigt / abgelaufen ────────────────────────────────────────
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.userId;
         if (!userId) break;
-
         await prisma.user.update({
           where: { id: userId },
           data: {
@@ -63,26 +56,20 @@ export async function POST(req: NextRequest) {
             subscriptionEnd:    new Date(),
           } as any,
         });
-
-        // Abmelde-Email
         await sendSubscriptionEmail(userId, "cancelled");
         break;
       }
 
-      // ── Zahlung fehlgeschlagen ────────────────────────────────────────────
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
         const user = await prisma.user.findFirst({
           where: { stripeCustomerId: customerId } as any,
         });
-        if (user) {
-          await sendSubscriptionEmail(user.id, "payment_failed");
-        }
+        if (user) await sendSubscriptionEmail(user.id, "payment_failed");
         break;
       }
 
-      // ── Trial endet bald (3 Tage vorher) ─────────────────────────────────
       case "customer.subscription.trial_will_end": {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.userId;
@@ -98,9 +85,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-// ─── HILFSFUNKTIONEN ─────────────────────────────────────────────────────────
-
-async function upsertSubscription(userId: string, sub: Stripe.Subscription) {
+async function upsertSubscription(stripe: Stripe, userId: string, sub: Stripe.Subscription) {
   const priceId = sub.items.data[0]?.price.id;
   const plan    = getPlanFromPriceId(priceId);
   const status  = sub.status === "active" || sub.status === "trialing" ? "ACTIVE" : "CANCELLED";
